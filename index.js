@@ -16,12 +16,13 @@ const server = new ApolloServer({
     typeDefs,
     resolvers,
     context: ({req})=>{ //context hace que este disponible en todos los resolvers la informacion
-        // console.log(req.headers['authorization']);
+        // console.log(req.headers);
        const token = (req.headers['authorization'] || ''); //se captura el token que llega por headers
         if(token){
             try {
                 //verificamos el token que recibimos que pasamos como primer parametro y segundo la palabra secreta
-                const usuario = jwt.verify(token, process.env.SECRETA); 
+                const usuario = jwt.verify(token.replace('Bearer ', ''), process.env.SECRETA); 
+
                 // console.log(usuario);
 
                 return { //hacemos disponible la informacion poniendola en el return
@@ -29,6 +30,7 @@ const server = new ApolloServer({
                 } 
             } catch (error) {
                 console.log(error);
+                return error;
             }
         }
     }

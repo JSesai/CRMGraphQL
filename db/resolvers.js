@@ -22,10 +22,8 @@ const crearToken = (user, secretWord, expiration) => {
 export const resolvers = {
     Query: {
         //usuarios
-        obtenerUsuario: async (_, { token }) => {
-            //deciframos el jwt con el metodo verify y se le para el jwt y la palabra secreta
-            const usuarioId = await jwt.verify(token, process.env.SECRETA);
-            return usuarioId;
+        obtenerUsuario: async (_, {}, ctx) => {
+            return ctx.usuario
         },
 
         //productos
@@ -101,18 +99,20 @@ export const resolvers = {
             return clienteRequerido;
         },
 
-        obtenerPedidos: async (_, { }, ctx) => {
-            try {
-                const pedidos = await Pedido.find({});
-                return pedidos
-            } catch (error) {
-                console.log(error);
-            }
-        },
+        // obtenerPedidos: async (_, { }, ctx) => {
+        //     try {
+        //         const pedidos = await Pedido.find({});
+        //         return pedidos
+        //     } catch (error) {
+        //         console.log(error);
+        //     }
+        // },
 
         obtenerPedidosVendedor: async (_, { }, ctx) => {
             //validar que el vendedor sea el usuario que esta logueado
-            const pedidos = await Pedido.find({ vendedor: ctx.usuario.id });
+            console.log('entrando...');
+            const pedidos = await Pedido.find({ vendedor: ctx.usuario.id }).populate('cliente');
+            console.log(pedidos);
             if (!pedidos) throw new Error('No tienes pedidos');
             return pedidos
         },
@@ -276,10 +276,11 @@ export const resolvers = {
             //retornar String de producto eliminado
             return 'Producto Eliminado'
         },
-
+ 
         //Clientes
         nuevoCliente: async (_, { input }, ctx) => {
             const { email } = input;
+            console.log('mandaste este mail', email);
 
             //Validar que no este registrado el email
             const clienteExiste = await Cliente.findOne({ email }); //buscar cliente por email
@@ -411,29 +412,8 @@ export const resolvers = {
 
             //validar que sea el cliente 
             if (cliente !== existePedido.cliente.toString()) throw new Error("No es el mismo cliente");
-
-            if(input.pedido){
-
-                //revisar que el stock este disponible
-                for await (const articulo of input.pedido) {
-                    const { id } = articulo;
-                    const producto = await Producto.findById(id);
-                    console.log(producto);
-    
-                    if (articulo.cantidad > producto.existencia) {
-                        throw new Error(`El articulo: ${producto.nombre} excede la cantidad disponible`);
-                    } else {
-                        //restar la cantidad del pedido a la existencia
-                        producto.existencia -= articulo.cantidad;
-                        //guardar en la bd
-                        await producto.save();
-                    }
-                }
-            }else{
-                throw new Error("Enviame el pedido");
-            }
-
-            //actualizar el pedido
+                console.log(input);
+            
             const pedidoActualizado = Pedido.findOneAndUpdate({ _id: id }, input, { new: true });
 
             //devolver pedido actualizado
